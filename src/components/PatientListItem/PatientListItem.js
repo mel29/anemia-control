@@ -6,12 +6,13 @@
   IconButton,
   Typography,
   VisibilityIcon,
+  DeleteIcon,
   ThemeProvider
 } from '../../mui-imports';
 
 import mainTheme from '../../theme/mainTheme';
 
-function PatientListItem({ patient, onViewDetails }) {
+function PatientListItem({ patient, onViewDetails, onDelete }) {
   const Wrapper = ({ children }) => <ThemeProvider theme={mainTheme}>{children}</ThemeProvider>;
   // Función para obtener las iniciales
   const getInitials = (firstName, lastName) => {
@@ -35,9 +36,14 @@ function PatientListItem({ patient, onViewDetails }) {
     <Wrapper>
       <ListItem
         secondaryAction={ // Contenido a la derecha del item (botón de ver detalle)
-          <IconButton edge="end" aria-label="ver-detalle" onClick={() => onViewDetails(patient.id)}>
-            <VisibilityIcon sx={{ color: 'primary.main' }} /> {/* Icono de ojo */}
-          </IconButton>
+          <div style={{ display: 'flex', gap: '8px' }}> {/* Contenedor para alinear los dos botones */}
+            <IconButton edge="end" aria-label="ver-detalle" onClick={() => onViewDetails(patient.id)}>
+              <VisibilityIcon sx={{ color: 'primary.main' }} /> {/* Icono de ojo */}
+            </IconButton>
+            <IconButton edge="end" aria-label="eliminar-paciente" onClick={() => onDelete(patient.id, patient.imageUrl)}>
+              <DeleteIcon sx={{ color: 'primary.main' }} /> {/* Icono de tacho */}
+            </IconButton>
+          </div>
         }
         sx={{
           py: 2, // Padding vertical
