@@ -56,3 +56,4 @@ export { default as PhotoCameraIcon } from '@mui/icons-material/PhotoCamera';
 export { default as HealingIcon } from '@mui/icons-material/Healing';
 export { default as AppLogo } from '../assets/images/app-logo.svg';
 export { default as GroupAddIcon } from '@mui/icons-material/GroupAdd';
+export { default as DeleteIcon } from '@mui/icons-material/Delete';
