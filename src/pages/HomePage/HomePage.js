@@ -1,6 +1,8 @@
-﻿import { useState } from 'react';
+﻿import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom'; // Para navegar programáticamente
-import { auth, db } from '../../firebase/firebaseConfig'; // Importa db y auth
+import { auth, db, storage as firebaseStorage } from '../../firebase/firebaseConfig'; // Importa db y auth
+import { deleteDoc, doc } from 'firebase/firestore'; // Importa funciones de Firestore para eliminar
+import { ref as storageRef, deleteObject } from 'firebase/storage'; // Importa funciones de Storage para eliminar
 import { signOut } from 'firebase/auth';
 
 import { useLoading } from '../../contexts/LoadingContext';
@@ -23,6 +25,9 @@ function HomePage() {
   const navigate = useNavigate();
 
   const [openConfirmLogout, setOpenConfirmLogout] = useState(false);
+  const [openConfirmDelete, setOpenConfirmDelete] = useState(false);
+  const [patientToDeleteId, setPatientToDeleteId] = useState(null);
+  const [patientToDeleteImageUrl, setPatientToDeleteImageUrl] = useState(null); // Para almacenar la URL de la imagen
 
   const { showLoading, hideLoading } = useLoading();
   const { showSnackbar } = useSnackbar();
@@ -68,6 +73,49 @@ function HomePage() {
   const handleViewPatientDetails = (patientId) => {
     navigate(`/patient/${patientId}`); // Navega al detalle del paciente
   };
+
+  const handleDeletePatient = (patientId, imageUrl) => {
+    setPatientToDeleteId(patientId);
+    setPatientToDeleteImageUrl(imageUrl);
+    setOpenConfirmDelete(true); // Abre el diálogo de confirmación
+  };
+
+  const handleCloseConfirmDelete = () => {
+    setOpenConfirmDelete(false);
+    setPatientToDeleteId(null);
+    setPatientToDeleteImageUrl(null);
+  };
+
+  const handleConfirmDelete = useCallback(async () => {
+    setOpenConfirmDelete(false); // Cierra el diálogo
+    if (!patientToDeleteId) return; // Si no hay ID, salir
+
+    showLoading('Eliminando paciente...');
+    try {
+      // 1. Eliminar la imagen de Firebase Storage (si existe)
+      if (patientToDeleteImageUrl) {
+        const imageRef = storageRef(firebaseStorage, patientToDeleteImageUrl);
+        await deleteObject(imageRef);
+        console.log("Imagen eliminada de Storage:", patientToDeleteImageUrl);
+        showSnackbar('Imagen del paciente eliminada.', 'info');
+      }
+
+      // 2. Eliminar el documento de Firestore
+      await deleteDoc(doc(db, 'patients', patientToDeleteId));
+      console.log("Documento de paciente eliminado:", patientToDeleteId);
+
+      showSnackbar('Paciente eliminado exitosamente.', 'success');
+      refreshData(); // Importante: Llama a refreshData para actualizar la lista después de la eliminación
+
+    } catch (err) {
+      console.error("Error al eliminar paciente:", err);
+      showSnackbar(`Error al eliminar paciente: ${err.message}`, 'error');
+    } finally {
+      setPatientToDeleteId(null);
+      setPatientToDeleteImageUrl(null);
+      hideLoading();
+    }
+  }, [patientToDeleteId, patientToDeleteImageUrl, db, firebaseStorage, showLoading, hideLoading, showSnackbar, refreshData]);
 
   return (
     <ThemeProvider theme={mainTheme}>
@@ -158,6 +206,7 @@ function HomePage() {
                   key={patient.id}
                   patient={patient}
                   onViewDetails={handleViewPatientDetails}
+                  onDelete={handleDeletePatient}
                 />
               ))}
             </List>
@@ -170,6 +219,14 @@ function HomePage() {
           message="¿Estás seguro que deseas cerrar tu sesión actual?"
           onConfirm={handleConfirmLogout}
           onCancel={handleCloseConfirmLogout}
+        />
+
+        <ConfirmationDialog
+          open={openConfirmDelete}
+          title="Confirmar Eliminación de Paciente"
+          message={`¿Estás seguro que deseas eliminar a este paciente? Esta acción es irreversible y también eliminará la imagen asociada (si existe).`}
+          onConfirm={handleConfirmDelete}
+          onCancel={handleCloseConfirmDelete}
         />
       </Box>
     </ThemeProvider>
